@@ -1,3 +1,7 @@
+> **⚠️ ARCHIVED** — This repository has been consolidated into [metasystem-master](https://github.com/organvm-ii-poiesis/metasystem-master). All active development has moved there. This repository is preserved for historical reference only.
+
+---
+
 [![ORGAN-II: Poiesis](https://img.shields.io/badge/ORGAN--II-Poiesis-6a1b9a?style=flat-square)](https://github.com/organvm-ii-poiesis)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](./LICENSE)
@@ -315,7 +319,7 @@ OSCdef(\intensity, { |msg|
     ("Intensity: " ++ ~intensity).postln;
 }, '/performance/intensity');
 
-OSCdef(\tempo, { |msg|
+OSCdef(	empo, { |msg|
     ~tempo = msg[1];
     ("Tempo: " ++ ~tempo).postln;
 }, '/performance/tempo');
