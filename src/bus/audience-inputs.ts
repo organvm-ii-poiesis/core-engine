@@ -5,7 +5,7 @@
  * batching, and publishing to the parameter bus.
  */
 
-import { v4 as uuidv4 } from 'crypto';
+import { randomUUID as uuidv4 } from 'crypto';
 import {
   type AudienceInput,
   AudienceInputSchema,
@@ -31,6 +31,7 @@ export interface ClientState {
   location?: { x: number; y: number; zone?: string };
   isBlocked: boolean;
   blockedUntil?: number;
+  credits: number;
 }
 
 // =============================================================================
@@ -44,6 +45,7 @@ export class AudienceInputsHandler {
   private inputBuffer: AudienceInput[];
   private batchTimer: NodeJS.Timeout | null = null;
   private sessionId: string;
+  private defaultCredits: number = 100;
   
   constructor(
     bus: ParameterBus,
@@ -88,10 +90,16 @@ export class AudienceInputsHandler {
         lastInputTime: 0,
         inputCount: 0,
         isBlocked: false,
+        credits: this.defaultCredits,
       };
       this.clients.set(clientId, client);
     }
     
+    // Check credits
+    if (client.credits <= 0) {
+      return { accepted: false, reason: 'credits_expired' };
+    }
+
     // Check if client is blocked
     if (client.isBlocked) {
       if (client.blockedUntil && Date.now() > client.blockedUntil) {
@@ -121,6 +129,8 @@ export class AudienceInputsHandler {
     // Update client state
     client.lastInputTime = now;
     client.inputCount++;
+    client.credits--; // Deduct credit
+    
     if (location) {
       client.location = location;
     }
@@ -252,6 +262,31 @@ export class AudienceInputsHandler {
       }
     }
     return count;
+  }
+
+  // ===========================================================================
+  // CREDIT MANAGEMENT
+  // ===========================================================================
+
+  /**
+   * Expire all credits for all clients.
+   * Metric: 100% expiration.
+   */
+  expireAllCredits(): void {
+    for (const client of this.clients.values()) {
+      client.credits = 0;
+    }
+    console.log(`[AudienceInputs] Expired credits for ${this.clients.size} clients.`);
+  }
+
+  /**
+   * Reset credits for a specific client.
+   */
+  resetCredits(clientId: string, amount?: number): void {
+    const client = this.clients.get(clientId);
+    if (client) {
+      client.credits = amount ?? this.defaultCredits;
+    }
   }
   
   // ===========================================================================

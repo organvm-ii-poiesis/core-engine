@@ -1,0 +1,26 @@
+version: 1
+project:
+  name: core-engine
+  description: Auto-generated seed. Waiting for human intent.
+  owners:
+  - handle: omni-dromenon-machina
+    role: steward
+  repo:
+    org: omni-dromenon-machina
+    type: node
+    role: architect/core
+architecture:
+  tech_stack:
+  - node
+  - typescript
+automation_contract:
+  ai_access:
+    read_paths:
+    - '**/*'
+    write_paths:
+    - src/**
+    - docs/**
+    - tests/**
+    disallowed_writes:
+    - .github/workflows/**
+    - seed.yaml

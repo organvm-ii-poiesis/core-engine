@@ -9,7 +9,8 @@
 import express from 'express';
 import { createServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
-import { v4 as uuidv4 } from 'crypto';
+import { randomUUID as uuidv4 } from 'crypto';
+import cron from 'node-cron';
 
 import { config } from './config.js';
 import {
@@ -24,6 +25,9 @@ import { createBus, BusEvent } from './bus/parameter-bus.js';
 import { createAudienceInputsHandler } from './bus/audience-inputs.js';
 import { createPerformerSubscriptions } from './bus/performer-subscriptions.js';
 import { createAggregator } from './consensus/parameter-aggregation.js';
+import { MetasystemManager } from './orchestrator/metasystem-manager.js';
+import { NightWatchman } from './dreamcatcher/watchman.js';
+import path from 'path';
 
 // =============================================================================
 // SERVER INITIALIZATION
@@ -31,6 +35,14 @@ import { createAggregator } from './consensus/parameter-aggregation.js';
 
 const app = express();
 const httpServer = createServer(app);
+
+// Metasystem
+const MANIFEST_PATH = path.resolve(process.cwd(), 'omni-dromenon-machina/4jp-metasystem.yaml');
+const metasystem = new MetasystemManager(MANIFEST_PATH);
+const watchman = new NightWatchman(metasystem);
+watchman.startWatch(); // Begin autonomous operation
+
+let universeHealth: any[] = [];
 
 // Create Socket.io server
 const io = new SocketIOServer(httpServer, {
@@ -112,6 +124,36 @@ app.get('/session', (req, res) => {
 // Current values
 app.get('/values', (req, res) => {
   res.json(aggregator.getAllValues());
+});
+
+// Metasystem health
+app.get('/metasystem/health', (req, res) => {
+  res.json(universeHealth);
+});
+
+// Metasystem dispatch
+app.post('/metasystem/dispatch', async (req, res) => {
+  const result = await metasystem.dispatcher.dispatchTask({
+    workspaceName: req.body.workspaceName,
+    taskType: req.body.taskType || 'ai-task',
+    title: req.body.title,
+    description: req.body.description,
+    priority: req.body.priority || 'normal',
+  });
+  
+  if (result.success) {
+    res.json(result);
+  } else {
+    res.status(500).json(result);
+  }
+});
+
+// Admin: Trigger credit expiration
+app.post('/admin/expire-credits', (req, res) => {
+  console.log('[Admin] Manual credit expiration triggered');
+  audienceHandler.expireAllCredits();
+  io.of('/audience').emit('credits:expired', { message: 'Admin has expired all credits.' });
+  res.json({ status: 'success', message: 'All credits invalidated' });
 });
 
 // =============================================================================
@@ -299,6 +341,31 @@ setInterval(() => {
     values,
   });
 }, config.consensus.broadcastIntervalMs);
+
+// Metasystem health scan loop (every 5 minutes)
+const runUniverseScan = async () => {
+  try {
+    universeHealth = await metasystem.getUniverseHealth();
+    performerNs.emit('metasystem:health', universeHealth);
+    console.log(`[Metasystem] Universe health updated at ${new Date().toLocaleTimeString()}`);
+  } catch (error) {
+    console.error('[Metasystem] Failed to update universe health:', error);
+  }
+};
+
+setInterval(runUniverseScan, 300000); 
+runUniverseScan(); // Initial scan on startup
+
+// =============================================================================
+// SCHEDULED TASKS
+// =============================================================================
+
+// Expire all credits at midnight
+cron.schedule('0 0 * * *', () => {
+  console.log('[Scheduler] Running midnight credit expiration...');
+  audienceHandler.expireAllCredits();
+  io.of('/audience').emit('credits:expired', { message: 'Daily credits have expired.' });
+});
 
 // =============================================================================
 // GRACEFUL SHUTDOWN
