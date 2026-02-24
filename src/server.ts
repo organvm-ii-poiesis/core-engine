@@ -29,12 +29,28 @@ import { MetasystemManager } from './orchestrator/metasystem-manager.js';
 import { NightWatchman } from './dreamcatcher/watchman.js';
 import path from 'path';
 
+import { systemBus } from './bus/system-bus.js';
+import webhookRoutes from './routes/webhooks.js';
+import { criticAgent } from './orchestrator/critic.js';
+import { architect } from './orchestrator/architect.js';
+
 // =============================================================================
 // SERVER INITIALIZATION
 // =============================================================================
 
 const app = express();
 const httpServer = createServer(app);
+
+// Initialize System Bus and Agents
+(async () => {
+  try {
+    await systemBus.connect();
+    await architect.init(); // Connect to Chroma
+    await criticAgent.start();
+  } catch (err) {
+    console.error('Metasystem Init Failed:', err);
+  }
+})();
 
 // Metasystem
 const MANIFEST_PATH = path.resolve(process.cwd(), 'omni-dromenon-machina/4jp-metasystem.yaml');
@@ -89,24 +105,20 @@ const audienceHandler = createAudienceInputsHandler(
 
 const performerSubs = createPerformerSubscriptions(bus, sessionId);
 
-// =============================================================================
-// MIDDLEWARE
-// =============================================================================
+import architectRoutes from './routes/architect.js';
 
+// ... (previous imports)
+
+// Middleware
+app.use(cors());
 app.use(express.json());
 
-// Health check
+// Routes
+app.use('/api/webhooks/github', webhookRoutes);
+app.use('/api/architect', architectRoutes); // Expose the Brain
+
 app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    sessionId,
-    sessionStatus,
-    uptime: process.uptime(),
-    participants: {
-      audience: audienceHandler.getActiveClientCount(),
-      performers: performerSubs.getActivePerformerCount(),
-    },
-  });
+  res.json({ status: 'alive', timestamp: new Date().toISOString() });
 });
 
 // Session info
