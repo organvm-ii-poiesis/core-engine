@@ -1,26 +1,40 @@
-version: 1
-project:
-  name: core-engine
-  description: Auto-generated seed. Waiting for human intent.
-  owners:
-  - handle: omni-dromenon-machina
-    role: steward
-  repo:
-    org: omni-dromenon-machina
-    type: node
-    role: architect/core
-architecture:
-  tech_stack:
-  - node
-  - typescript
-automation_contract:
-  ai_access:
-    read_paths:
-    - '**/*'
-    write_paths:
-    - src/**
-    - docs/**
-    - tests/**
-    disallowed_writes:
-    - .github/workflows/**
-    - seed.yaml
+# seed.yaml — Automation Contract for omni-dromenon-machina/core-engine
+# Schema: seed/v1.0
+# Updated: 2026-03-04 (VIVIFICATIO Sprint)
+# Category: flagship
+
+schema_version: "1.0"
+organ: II
+organ_name: Art
+repo: core-engine
+org: omni-dromenon-machina
+
+metadata:
+  implementation_status: PROTOTYPE
+  tier: flagship
+  promotion_status: CANDIDATE
+  last_validated: "2026-03-04"
+  generated: "2026-02-12"
+  sprint: "VIVIFICATIO"
+
+agents:
+  - name: ci
+    trigger: on_push
+    workflow: .github/workflows/ci.yml
+    description: "Continuous integration pipeline"
+
+consumes:
+  - type: dependency
+    source: omni-dromenon-machina/metasystem-master
+    description: Depends on metasystem-master for manifest and orchestration
+
+subscriptions:
+  - event: governance.updated
+    source: ORGAN-IV
+    action: Check compliance with updated governance rules
+  - event: health-audit.completed
+    source: ORGAN-IV
+    action: Review audit findings for this repo
+  - event: theory.published
+    source: ORGAN-I
+    action: Check for art derivative opportunities
